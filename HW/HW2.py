@@ -95,7 +95,7 @@ if document and question:
         if use_advance:
             model_name = "claude-opus-4-20250514"
         else:
-            model_name = "claude-3-5-sonnet-20241022"
+            model_name = "claude-4-sonnet-20250514"
         
         # Prepare messages
         messages = [
