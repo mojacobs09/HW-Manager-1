@@ -105,16 +105,10 @@ if document and question:
             }
         ]
         
+        # Generate response with Claude streaming
         with client.messages.stream(
-        model=model_name,
-        max_tokens=1024,
-        messages=messages,
-    ) as stream:
-        response_text = ""
-        for text in stream.text_stream:
-            response_text += text
-        
-        st.write(response_text)
-        
-        # Stream the response
-        st.write_stream(stream)
+            model=model_name,
+            max_tokens=1024,
+            messages=messages,
+        ) as stream:
+            st.write_stream(stream.text_stream)
