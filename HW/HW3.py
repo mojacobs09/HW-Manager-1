@@ -42,7 +42,7 @@ llm_vendor = st.sidebar.selectbox('Which Vendor?', ('OpenAI', 'Anthropic'))
 
 if 'current_vendor' not in st.session_state:
     st.session_state.current_vendor = llm_vendor
-    
+
 if st.session_state.current_vendor != llm_vendor:
     if 'client' in st.session_state:
         del st.session_state.client
@@ -72,7 +72,7 @@ if 'client' not in st.session_state:
         st.session_state.client = OpenAI(api_key=api_key)
         st.session_state.vendor = 'OpenAI'
     else:
-        api_key = st.secrets['ANTHROPIC_API_KEY']
+        api_key = st.secrets['CLAUDE_API_KEY']
         st.session_state.client = anthropic.Anthropic(api_key=api_key)
         st.session_state.vendor = 'Anthropic'
 
