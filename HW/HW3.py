@@ -28,7 +28,7 @@ def read_url_content(url):
 
 # Buffer function - keeps last 6 messages + system prompt
 def trim_messages(messages, max_messages=6):
-    "Keep system prompt + last 6 messages (3 user-assistant exchanges)"
+    """Keep system prompt + last 6 messages (3 user-assistant exchanges)"""
     system_msgs = [msg for msg in messages if msg['role'] == 'system']
     other_msgs = [msg for msg in messages if msg['role'] != 'system']
     
@@ -40,18 +40,38 @@ def trim_messages(messages, max_messages=6):
 st.sidebar.subheader('LLM Settings')
 llm_vendor = st.sidebar.selectbox('Which Vendor?', ('OpenAI', 'Anthropic'))
 
+if st.session_state.current_vendor != llm_vendor:
+    if 'client' in st.session_state:
+        del st.session_state.client
+    if 'messages' in st.session_state:
+        del st.session_state.messages
+    st.session_state.current_vendor = llm_vendor
+
+
+
 if llm_vendor == 'OpenAI':
     openAI_model = st.sidebar.selectbox('Which Model?', ('mini', 'premium'))
     if openAI_model == 'mini':
-        model_to_use = 'gpt-4o-mini'
+        model_to_use = 'gpt-5-mini-2025-08-07'
     else:
-        model_to_use = 'gpt-4o'
+        model_to_use = 'gpt-5-2025-08-07'
 else:
     anthropic_model = st.sidebar.selectbox('Which Model?', ('haiku', 'premium'))
     if anthropic_model == 'haiku':
-        model_to_use = 'claude-3-5-haiku-20241022'
+        model_to_use = 'claude-haiku-4-5-20251001'
     else:
-        model_to_use = 'claude-3-5-sonnet-20241022'
+        model_to_use = 'claude-sonnet-4-5-20250929'
+
+# creating client 
+if 'client' not in st.session_state:
+    if llm_vendor == 'OpenAI':
+        api_key = st.secrets['OPENAI_API_KEY']
+        st.session_state.client = OpenAI(api_key=api_key)
+        st.session_state.vendor = 'OpenAI'
+    else:
+        api_key = st.secrets['ANTHROPIC_API_KEY']
+        st.session_state.client = anthropic.Anthropic(api_key=api_key)
+        st.session_state.vendor = 'Anthropic'
 
 # Sidebar - URL Input
 st.sidebar.subheader('URL Input')
@@ -74,16 +94,7 @@ if url2:
     if content2:
         system_content += f"\n\nContext from {url2}:\n{content2}"
 
-# Create API client based on vendor
-if 'client' not in st.session_state:
-    if llm_vendor == 'OpenAI':
-        api_key = st.secrets['OPENAI_API_KEY']
-        st.session_state.client = OpenAI(api_key=api_key)
-        st.session_state.vendor = 'OpenAI'
-    else:
-        api_key = st.secrets['ANTHROPIC_API_KEY']
-        st.session_state.client = anthropic.Anthropic(api_key=api_key)
-        st.session_state.vendor = 'Anthropic'
+
 
 # Initialize messages with system prompt
 if 'messages' not in st.session_state:
