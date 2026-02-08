@@ -40,6 +40,9 @@ def trim_messages(messages, max_messages=6):
 st.sidebar.subheader('LLM Settings')
 llm_vendor = st.sidebar.selectbox('Which Vendor?', ('OpenAI', 'Anthropic'))
 
+if 'current_vendor' not in st.session_state:
+    st.session_state.current_vendor = llm_vendor
+    
 if st.session_state.current_vendor != llm_vendor:
     if 'client' in st.session_state:
         del st.session_state.client
