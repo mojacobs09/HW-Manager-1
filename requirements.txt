@@ -3,3 +3,4 @@ openAI
 anthropic
 requests
 beautifulsoup4
+chromadb
