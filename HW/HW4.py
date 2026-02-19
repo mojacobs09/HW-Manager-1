@@ -6,9 +6,8 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 import os
 
-folder = './HW-4-su-org/'
-files = os.listdir(folder)
-print(f"Found {len(files)} files: {files}")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FOLDER_PATH = os.path.join(BASE_DIR, 'HW-4-su-org'))
 
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -74,7 +73,7 @@ def add_to_collection(collection, text, chunk_id, file_name):
 
 def load_html_to_collection(folder_path, collection):
     html_files = list(Path(folder_path).glob('*.html'))
-    print(f"Found {len(html_files)} HTML files: {html_files}")  # add this line
+    print(f"Found {len(html_files)} HTML files: {html_files}")
     for html_file in html_files:
         text = extract_text_from_html(html_file)
         if text:
@@ -92,11 +91,10 @@ def create_vector_db():
     # checking if collection is empty - only create if doesn't exist
     if collection.count() == 0:
         with st.spinner('Loading HTML files into collection...'):
-            loaded = load_html_to_collection('./HW/HW-4-su-org/', collection)
+            loaded = load_html_to_collection(FOLDER_PATH, collection)
             st.success(f'Loaded {collection.count()} document chunks!')
-    
     return collection
-
+    
 if 'HW4_VectorDB' not in st.session_state:
     st.session_state.HW4_VectorDB = create_vector_db()
 
