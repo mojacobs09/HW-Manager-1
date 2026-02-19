@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FOLDER_PATH = os.path.join(BASE_DIR, 'HW-4-su-org'))
+FOLDER_PATH = os.path.join(BASE_DIR, 'HW-4-su-org')
 
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
