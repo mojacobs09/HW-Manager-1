@@ -92,7 +92,7 @@ def create_vector_db():
     # checking if collection is empty - only create if doesn't exist
     if collection.count() == 0:
         with st.spinner('Loading HTML files into collection...'):
-            loaded = load_html_to_collection('./HW-4-su-org/', collection)
+            loaded = load_html_to_collection('./HW/HW-4-su-org/', collection)
             st.success(f'Loaded {collection.count()} document chunks!')
     
     return collection
