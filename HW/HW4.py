@@ -78,9 +78,10 @@ def load_html_to_collection(folder_path, collection):
         text = extract_text_from_html(html_file)
         if text:
             chunks = chunk_text(text, html_file.name)
-            for chunk_id, chunk_text in chunks:
-                add_to_collection(collection, chunk_text, chunk_id, html_file.name)
+            for chunk_id, chunk_content in chunks:  # changed chunk_text to chunk_content
+                add_to_collection(collection, chunk_content, chunk_id, html_file.name)  # updated here too
     return True
+
 
 # creating the vector database function 
 def create_vector_db():
