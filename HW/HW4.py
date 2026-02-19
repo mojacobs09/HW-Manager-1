@@ -4,6 +4,11 @@ import sys
 import chromadb
 from pathlib import Path
 from bs4 import BeautifulSoup
+import os
+
+folder = './HW-4-su-org/'
+files = os.listdir(folder)
+print(f"Found {len(files)} files: {files}")
 
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -69,17 +74,14 @@ def add_to_collection(collection, text, chunk_id, file_name):
 
 def load_html_to_collection(folder_path, collection):
     html_files = list(Path(folder_path).glob('*.html'))
-    
+    print(f"Found {len(html_files)} HTML files: {html_files}")  # add this line
     for html_file in html_files:
         text = extract_text_from_html(html_file)
         if text:
-            # Chunk the document into 2 pieces
             chunks = chunk_text(text, html_file.name)
-            # Add each chunk to the collection
             for chunk_id, chunk_text in chunks:
                 add_to_collection(collection, chunk_text, chunk_id, html_file.name)
     return True
-
 
 # creating the vector database function 
 def create_vector_db():
@@ -90,7 +92,7 @@ def create_vector_db():
     # checking if collection is empty - only create if doesn't exist
     if collection.count() == 0:
         with st.spinner('Loading HTML files into collection...'):
-            loaded = load_html_to_collection('./HW-04-Data/', collection)
+            loaded = load_html_to_collection('./HW-4-su-org/', collection)
             st.success(f'Loaded {collection.count()} document chunks!')
     
     return collection
