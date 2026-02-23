@@ -14,7 +14,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 if 'openai_client' not in st.session_state:
     st.session_state.openai_client = OpenAI(api_key=st.secrets.OPENAI_API_KEY)
 
-# ── PDF helpers (unchanged from Lab 4) ────────────────────────────────────────
+# ── PDF helpers ────────────────────────────────────────────────────────────────
 def extract_text_from_pdf(pdf_path):
     try:
         reader = PdfReader(pdf_path)
@@ -47,47 +47,39 @@ def load_pdfs_to_collection(folder_path, collection):
 def create_vector_db():
     chroma_client = chromadb.PersistentClient(path='./ChromaDB_for_HW5')
     collection = chroma_client.get_or_create_collection('HW5Collection')
-    
+
     if collection.count() == 0:
-        # Debug: check if PDFs are actually found
-        load_pdfs_to_collection('./Labs/Lab-04-Data/', collection)
+        pdf_files = list(Path('./Labs/Lab-04-Data/').glob('*.pdf'))
         st.write(f"DEBUG - PDFs found: {[f.name for f in pdf_files]}")
-        
+
         with st.spinner('Loading PDFs into collection...'):
-            load_pdfs_to_collection('./Labs/Lab-04-Data/', collection)
+            loaded = load_pdfs_to_collection('./Labs/Lab-04-Data/', collection)
             st.write(f"DEBUG - Documents in collection after load: {collection.count()}")
             st.success(f'Loaded {collection.count()} documents!')
-    
+
     return collection
+
+if 'HW5_VectorDB' not in st.session_state:
+    st.session_state.HW5_VectorDB = create_vector_db()
 
 # ── Tool function: relevant_course_info ───────────────────────────────────────
 def relevant_course_info(query: str) -> str:
-    """
-    Performs a vector search against the ChromaDB collection using the
-    provided query, then asks the LLM to summarise the retrieved chunks
-    into a concise answer.  Returns that answer as a string so it can be
-    fed back into the main conversation as a tool result.
-    """
     client = st.session_state.openai_client
 
-    # 1. Embed the query
     embed_resp = client.embeddings.create(input=query, model='text-embedding-3-small')
     query_embedding = embed_resp.data[0].embedding
 
-    # 2. Vector search
     results = st.session_state.HW5_VectorDB.query(
         query_embeddings=[query_embedding],
         n_results=3
     )
 
-    # 3. Build context string from retrieved chunks
     context = ""
     for i in range(len(results['documents'][0])):
         doc_content = results['documents'][0][i][:2000]
         doc_name    = results['ids'][0][i]
         context += f"\n\n--- Document: {doc_name} ---\n{doc_content}\n"
 
-    # 4. Ask the LLM to distil the context into an answer for this query
     synthesis_messages = [
         {
             "role": "system",
@@ -137,15 +129,14 @@ TOOLS = [
     }
 ]
 
-# ── Short-term memory buffer
+# ── Short-term memory buffer ───────────────────────────────────────────────────
 def trim_messages(messages, max_messages=6):
-    """Keep system prompt + last max_messages non-system messages."""
     system_msgs = [m for m in messages if m['role'] == 'system']
     other_msgs  = [m for m in messages if m['role'] != 'system']
     trimmed = other_msgs[-max_messages:] if len(other_msgs) > max_messages else other_msgs
     return system_msgs + trimmed
 
-# ── MAIN APP
+# ── Streamlit UI ───────────────────────────────────────────────────────────────
 st.title('HW5: Short-Term Memory RAG Chatbot')
 
 st.write("""
@@ -156,7 +147,6 @@ st.write("""
 - **Short-term memory:** keeps a rolling buffer of the last 6 messages (3 exchanges).
 """)
 
-# Initialise session state
 if 'hw5_messages' not in st.session_state:
     st.session_state['hw5_messages'] = [
         {
@@ -176,7 +166,6 @@ if 'hw5_messages' not in st.session_state:
         }
     ]
 
-# Display history (skip system messages)
 for msg in st.session_state['hw5_messages']:
     if msg['role'] not in ('system', 'tool'):
         with st.chat_message(msg['role']):
@@ -189,11 +178,8 @@ if user_input := st.chat_input('Ask a question about the course...'):
         st.markdown(user_input)
 
     client = st.session_state.openai_client
-
-    # Trim to short-term buffer before sending
     messages_to_send = trim_messages(st.session_state['hw5_messages'], max_messages=6)
 
-    # Agentic loop: keep going until the model stops calling tools
     while True:
         response = client.chat.completions.create(
             model='gpt-5-2025-08-07',
@@ -204,9 +190,7 @@ if user_input := st.chat_input('Ask a question about the course...'):
 
         assistant_msg = response.choices[0].message
 
-        # If the model wants to call a tool ─────────────────────────────────
         if assistant_msg.tool_calls:
-            # Append assistant turn (with tool_calls) to history
             messages_to_send.append(assistant_msg)
             st.session_state['hw5_messages'].append(assistant_msg)
 
@@ -215,10 +199,9 @@ if user_input := st.chat_input('Ask a question about the course...'):
                     args  = json.loads(tool_call.function.arguments)
                     query = args.get('query', '')
 
-                    with st.spinner(f'Searching documents for: "{query}"…'):
+                    with st.spinner(f'Searching documents for: "{query}"...'):
                         tool_result = relevant_course_info(query)
 
-                    # Feed tool result back into both histories
                     tool_msg = {
                         'role': 'tool',
                         'tool_call_id': tool_call.id,
@@ -227,10 +210,8 @@ if user_input := st.chat_input('Ask a question about the course...'):
                     messages_to_send.append(tool_msg)
                     st.session_state['hw5_messages'].append(tool_msg)
 
-            # Loop again so the model can produce its final reply
             continue
 
-        # Model produced a final text reply ──────────────────────────────────
         final_text = assistant_msg.content or ""
         with st.chat_message('assistant'):
             st.markdown(final_text)
