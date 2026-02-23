@@ -50,7 +50,7 @@ def create_vector_db():
     
     if collection.count() == 0:
         # Debug: check if PDFs are actually found
-        pdf_files = list(Path('./Labs/Lab-04-Data/').glob('*.pdf'))
+        load_pdfs_to_collection('./Labs/Lab-04-Data/', collection)
         st.write(f"DEBUG - PDFs found: {[f.name for f in pdf_files]}")
         
         with st.spinner('Loading PDFs into collection...'):
