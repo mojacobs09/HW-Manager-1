@@ -4,7 +4,7 @@ import sys
 import json
 import chromadb
 from pathlib import Path
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 # fix for using chromadb on streamlit
 __import__('pysqlite3')
