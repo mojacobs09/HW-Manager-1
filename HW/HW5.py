@@ -54,7 +54,6 @@ def add_to_collection(collection, text, chunk_id, file_name):
 
 def load_html_to_collection(folder_path, collection):
     html_files = list(Path(folder_path).glob('*.html'))
-    st.write(f"DEBUG - HTML files found: {[f.name for f in html_files]}")
     for html_file in html_files:
         text = extract_text_from_html(html_file)
         if text:
@@ -69,7 +68,6 @@ def create_vector_db():
     if collection.count() == 0:
         with st.spinner('Loading HTML files into collection...'):
             loaded = load_html_to_collection(FOLDER_PATH, collection)
-            st.write(f"DEBUG - Documents in collection after load: {collection.count()}")
             st.success(f'Loaded {collection.count()} document chunks!')
     return collection
 
