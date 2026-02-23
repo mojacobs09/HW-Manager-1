@@ -47,14 +47,18 @@ def load_pdfs_to_collection(folder_path, collection):
 def create_vector_db():
     chroma_client = chromadb.PersistentClient(path='./ChromaDB_for_HW5')
     collection = chroma_client.get_or_create_collection('HW5Collection')
+    
     if collection.count() == 0:
+        # Debug: check if PDFs are actually found
+        pdf_files = list(Path('./Labs/Lab-04-Data/').glob('*.pdf'))
+        st.write(f"DEBUG - PDFs found: {[f.name for f in pdf_files]}")
+        
         with st.spinner('Loading PDFs into collection...'):
             load_pdfs_to_collection('./Labs/Lab-04-Data/', collection)
+            st.write(f"DEBUG - Documents in collection after load: {collection.count()}")
             st.success(f'Loaded {collection.count()} documents!')
+    
     return collection
-
-if 'HW5_VectorDB' not in st.session_state:
-    st.session_state.HW5_VectorDB = create_vector_db()
 
 # ── Tool function: relevant_course_info ───────────────────────────────────────
 def relevant_course_info(query: str) -> str:
