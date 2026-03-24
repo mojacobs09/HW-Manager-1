@@ -24,26 +24,45 @@ uploaded = st.sidebar.file_uploader('Upload news.csv', type='csv')
 
 if uploaded and collection.count() == 0:
     df = pd.read_csv(uploaded)
-    with st.spinner('Loading articles into ChromaDB...'):
-        for i, row in df.iterrows():
-            text = str(row.get('Document', '')).strip()
-            if not text:
-                continue
-            embedding = client.embeddings.create(input=text, model='text-embedding-3-small').data[0].embedding
+    df['Document'] = df['Document'].astype(str).str.strip()
+    df = df[df['Document'] != '']  # drop empty rows
+
+    with st.spinner(f'Embedding {len(df)} articles... (this may take ~30 seconds)'):
+        # ✅ FAST - batch all texts in ONE API call instead of 1,290 individual calls
+        texts = df['Document'].tolist()
+        response = client.embeddings.create(
+            input=texts,
+            model='text-embedding-3-small'
+        )
+        embeddings = [r.embedding for r in response.data]
+
+    with st.spinner('Loading into ChromaDB...'):
+        batch_size = 100
+        for i in range(0, len(df), batch_size):
+            batch_df   = df.iloc[i:i+batch_size]
+            batch_embs = embeddings[i:i+batch_size]
             collection.add(
-                documents=[text],
-                ids=[f'article_{i}'],
-                embeddings=[embedding],
-                metadatas=[{
-                    'source': str(row.get('company_name', '')),
-                    'date':   str(row.get('Date', ''))[:10],
-                    'url':    str(row.get('URL', '')),
-                }]
+                documents=batch_df['Document'].tolist(),
+                ids=[f'article_{j}' for j in range(i, i+len(batch_df))],
+                embeddings=batch_embs,
+                metadatas=[
+                    {
+                        'source': str(row.get('company_name', '')),
+                        'date':   str(row.get('Date', ''))[:10],
+                        'url':    str(row.get('URL', '')),
+                    }
+                    for _, row in batch_df.iterrows()
+                ]
             )
+
     st.sidebar.success(f'Loaded {collection.count()} articles!')
 
 # ── Model selector ─────────────────────────────────────────────────────────────
-model = st.sidebar.selectbox('Model', ['gpt-4o-mini', 'gpt-4o'])
+openAI_model = st.sidebar.selectbox('Which Model?', ('Nano', 'Premium'))
+if openAI_model == 'Nano':
+    model = 'gpt-5-mini-2025-08-07'
+else:
+    model = 'gpt-5-2025-08-07'
 
 # ── Tool functions ─────────────────────────────────────────────────────────────
 def search_articles(query, top_k=6):
@@ -148,7 +167,19 @@ if user_input := st.chat_input('Ask about the news...'):
 
         if assistant_msg.tool_calls:
             messages_to_send.append(assistant_msg)
-            st.session_state.messages.append(assistant_msg)
+            # Convert to dict so session_state stays JSON-serializable
+            st.session_state.messages.append({
+                'role': 'assistant',
+                'content': assistant_msg.content or '',
+                'tool_calls': [
+                    {
+                        'id': tc.id,
+                        'type': 'function',
+                        'function': {'name': tc.function.name, 'arguments': tc.function.arguments}
+                    }
+                    for tc in assistant_msg.tool_calls
+                ]
+            })
 
             for tool_call in assistant_msg.tool_calls:
                 args = json.loads(tool_call.function.arguments)
